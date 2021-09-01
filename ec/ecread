@@ -1,0 +1,14 @@
+#!/bin/bash
+# author: morgen
+
+echo $#
+
+if ["$1" = ""];then
+	echo please input board name
+	echo ./build_ec pangul
+else
+	echo Update EC ....
+	sudo ./build/$1/util/uartupdatetool --port=ttyUSB0 --baudrate=115200 --opr=wr --addr=0x200C3020 --file=./build/$1/chip/npcx/spiflashfw/npcx_monitor.bin
+	sleep 1s
+	sudo ./build/$1/util/uartupdatetool --port=ttyUSB0 --baudrate=115200 --opr=rd --read-flash --file=./build/$1/ecbackup.bin
+fi

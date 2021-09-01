@@ -1,0 +1,12 @@
+#!/bin/bash
+# author: morgen
+
+echo $#
+
+if ["$1" = ""];then
+	echo please input board name
+	echo ./build_ec pangul
+else
+	echo building....
+	HOST_CROSS_COMPILE="" CROS_COMPILE_arm=arm-none-eabi- make -j32 BOARD=$1
+fi

@@ -1,0 +1,71 @@
+diff --git a/board/pangul/board.h b/board/pangul/board.h
+index 3e68d6616..7f354a360 100644
+--- a/board/pangul/board.h
++++ b/board/pangul/board.h
+@@ -23,11 +23,11 @@
+ ------------------------------------------------------------------------------*/
+ #define BLD_EC_VERSION_X        "0"
+ #define BLD_EC_VERSION_YZ       "02"
+-#define BLD_EC_VERSION_TEST     "00"
++#define BLD_EC_VERSION_TEST     "01"
+ 
+ #define BLD_EC_VERSION_X_HEX    0x00
+ #define BLD_EC_VERSION_YZ_HEX   0x02
+-#define BLD_EC_VERSION_TEST_HEX 0x00
++#define BLD_EC_VERSION_TEST_HEX 0x01
+ 
+ 
+ /*------------------------------------------------------------------------------
+diff --git a/common/power_button_x86.c b/common/power_button_x86.c
+index f0341b91e..a42925167 100644
+--- a/common/power_button_x86.c
++++ b/common/power_button_x86.c
+@@ -20,6 +20,7 @@
+ #include "task.h"
+ #include "timer.h"
+ #include "util.h"
++#include "flash.h"
+ 
+ /* Console output macros */
+ #define CPUTS(outstr) cputs(CC_SWITCH, outstr)
+@@ -233,6 +234,7 @@ static void power_button_released(uint64_t tnow)
+ static void set_initial_pwrbtn_state(void)
+ {
+ 	uint32_t reset_flags = system_get_reset_flags();
++    uint8_t ac_recovery_state;
+ 
+ 	if (system_jumped_to_this_image() &&
+ 	    chipset_in_state(CHIPSET_STATE_ON)) {
+@@ -277,13 +279,16 @@ static void set_initial_pwrbtn_state(void)
+ 		return;
+ 	}
+ 
+-#ifdef CONFIG_BRINGUP
+-	pwrbtn_state = PWRBTN_STATE_IDLE;
+-#else
+-	pwrbtn_state = PWRBTN_STATE_INIT_ON;
+-#endif
+-	CPRINTS("PB %s",
+-		pwrbtn_state == PWRBTN_STATE_INIT_ON ? "init-on" : "idle");
++    ac_recovery_state = mfg_data_read(MFG_AC_RECOVERY_OFFSET);
++    if (0x01 == ac_recovery_state) {
++        pwrbtn_state = PWRBTN_STATE_INIT_ON;   /* power on */
++    } else if (0x02 == ac_recovery_state) {
++        pwrbtn_state = PWRBTN_STATE_IDLE;       /* power off */
++    } else if (0x03 == ac_recovery_state) {
++        pwrbtn_state = PWRBTN_STATE_IDLE;       /* previous */
++    }
++    
++	CPRINTS("PB %s", pwrbtn_state == PWRBTN_STATE_INIT_ON ? "init-on" : "idle");
+ }
+ 
+ /**
+@@ -476,7 +481,7 @@ static void powerbtn_x86_init(void)
+ {
+ 	set_initial_pwrbtn_state();
+ }
+-DECLARE_HOOK(HOOK_INIT, powerbtn_x86_init, HOOK_PRIO_DEFAULT);
++DECLARE_HOOK(HOOK_INIT, powerbtn_x86_init, HOOK_PRIO_DEFAULT+1);
+ 
+ #ifdef CONFIG_LID_SWITCH
+ /**
